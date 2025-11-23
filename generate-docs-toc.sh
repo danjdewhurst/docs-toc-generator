@@ -341,27 +341,31 @@ generate_toc() {
     # Count files
     local total_files=${#all_files[@]}
     local md_files=0
-    for file in "${all_files[@]}"; do
-        if [[ "$file" == *.md ]]; then
-            ((md_files++))
-        fi
-    done
+    if [[ ${#all_files[@]} -gt 0 ]]; then
+        for file in "${all_files[@]}"; do
+            if [[ "$file" == *.md ]]; then
+                ((md_files++))
+            fi
+        done
+    fi
 
     output+="**Total files:** $total_files ($md_files markdown files)\n\n"
     output+="---\n\n"
 
     # Generate output based on GROUP_BY option
-    case "$GROUP_BY" in
-        directory)
-            output+=$(generate_by_directory "${all_files[@]}")
-            ;;
-        type)
-            output+=$(generate_by_type "${all_files[@]}")
-            ;;
-        none)
-            output+=$(generate_flat "${all_files[@]}")
-            ;;
-    esac
+    if [[ ${#all_files[@]} -gt 0 ]]; then
+        case "$GROUP_BY" in
+            directory)
+                output+=$(generate_by_directory "${all_files[@]}")
+                ;;
+            type)
+                output+=$(generate_by_type "${all_files[@]}")
+                ;;
+            none)
+                output+=$(generate_flat "${all_files[@]}")
+                ;;
+        esac
+    fi
 
     echo -e "$output"
 }

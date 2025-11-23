@@ -424,33 +424,4 @@ Created with ❤️ for better documentation management
 
 ## Changelog
 
-### 2.0.0 (2025-11-23)
-- **New Features**:
-  - Custom directory scanning (`-d, --directory`)
-  - Multiple filtering options (`-e, --exclude`, `-i, --include`)
-  - Three grouping modes: directory, type, none (`--group-by`)
-  - Multiple sorting options: name, date, size (`--sort`)
-  - Configurable snippet length (`-l, --snippet-length`)
-  - Maximum depth control (`--max-depth`)
-  - No-snippets mode for faster processing (`--no-snippets`)
-  - Custom ToC title (`--title`)
-  - Quiet mode (`-q, --quiet`)
-- **Testing**:
-  - Comprehensive test suite with 148 tests (100% coverage)
-  - Parallel test execution with auto-detected CPU cores (~3x faster)
-  - 5 test suites covering all functionality
-  - Bats-based testing framework
-- **Improvements**:
-  - Generic directory processing (removed hardcoded structure)
-  - Bash 3.2 compatibility (works with macOS default bash)
-  - Better performance with selective snippet extraction
-  - Fixed empty array handling for edge cases
-- **Breaking Changes**:
-  - None (all new features are opt-in via flags)
-
-### 1.0.0 (2025-11-23)
-- Initial release
-- Full and simple output modes
-- Smart content extraction
-- Cross-platform support (macOS/Linux)
-- File metadata display
+See [CHANGELOG.md](CHANGELOG.md) for a detailed history of changes.

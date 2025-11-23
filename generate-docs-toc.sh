@@ -6,6 +6,15 @@ set -euo pipefail
 DOCS_DIR="docs"
 OUTPUT_FILE=""
 SIMPLE_MODE=false
+SNIPPET_LENGTH=200
+MAX_DEPTH=""
+SORT_BY="name"
+EXCLUDE_PATTERNS=()
+INCLUDE_PATTERNS=()
+NO_SNIPPETS=false
+TOC_TITLE="Documentation Table of Contents"
+GROUP_BY="directory"
+QUIET=false
 
 # Usage information
 usage() {
@@ -15,14 +24,27 @@ Usage: $(basename "$0") [OPTIONS]
 Generate a table of contents for all documentation files.
 
 OPTIONS:
-    -o, --output FILE    Write output to FILE instead of stdout
-    -s, --simple         Simple mode (only paths and titles, no metadata)
-    -h, --help           Show this help message
+    -d, --directory DIR       Documentation directory to scan (default: docs)
+    -o, --output FILE         Write output to FILE instead of stdout
+    -s, --simple              Simple mode (only paths and titles, no metadata)
+    -l, --snippet-length NUM  Maximum snippet length in characters (default: 200)
+    --max-depth NUM           Maximum directory depth to traverse (default: unlimited)
+    --sort [name|date|size]   Sort files by name, date, or size (default: name)
+    -e, --exclude PATTERN     Exclude files/dirs matching pattern (can be used multiple times)
+    -i, --include PATTERN     Only include files matching pattern (can be used multiple times)
+    --no-snippets             Disable snippet extraction for faster processing
+    --title TEXT              Custom title for table of contents
+    --group-by [directory|type|none]  How to group files (default: directory)
+    -q, --quiet               Suppress progress messages
+    -h, --help                Show this help message
 
 EXAMPLES:
-    $(basename "$0")                    # Print TOC to stdout
-    $(basename "$0") -o docs/README.md  # Write TOC to file
-    $(basename "$0") --simple           # Print simple TOC
+    $(basename "$0")                                    # Print TOC to stdout
+    $(basename "$0") -d documentation -o TOC.md         # Custom directory and output
+    $(basename "$0") --simple --no-snippets             # Minimal output
+    $(basename "$0") -e "*.draft.md" -e "tmp/"          # Exclude patterns
+    $(basename "$0") --max-depth 2 --sort date          # Limit depth, sort by date
+    $(basename "$0") -i "*.md" --title "API Docs"       # Only markdown, custom title
 EOF
     exit 0
 }
@@ -31,12 +53,60 @@ EOF
 parse_args() {
     while [[ $# -gt 0 ]]; do
         case $1 in
+            -d|--directory)
+                DOCS_DIR="$2"
+                shift 2
+                ;;
             -o|--output)
                 OUTPUT_FILE="$2"
                 shift 2
                 ;;
             -s|--simple)
                 SIMPLE_MODE=true
+                shift
+                ;;
+            -l|--snippet-length)
+                SNIPPET_LENGTH="$2"
+                shift 2
+                ;;
+            --max-depth)
+                MAX_DEPTH="$2"
+                shift 2
+                ;;
+            --sort)
+                SORT_BY="$2"
+                if [[ ! "$SORT_BY" =~ ^(name|date|size)$ ]]; then
+                    echo "Error: --sort must be 'name', 'date', or 'size'" >&2
+                    exit 1
+                fi
+                shift 2
+                ;;
+            -e|--exclude)
+                EXCLUDE_PATTERNS+=("$2")
+                shift 2
+                ;;
+            -i|--include)
+                INCLUDE_PATTERNS+=("$2")
+                shift 2
+                ;;
+            --no-snippets)
+                NO_SNIPPETS=true
+                shift
+                ;;
+            --title)
+                TOC_TITLE="$2"
+                shift 2
+                ;;
+            --group-by)
+                GROUP_BY="$2"
+                if [[ ! "$GROUP_BY" =~ ^(directory|type|none)$ ]]; then
+                    echo "Error: --group-by must be 'directory', 'type', or 'none'" >&2
+                    exit 1
+                fi
+                shift 2
+                ;;
+            -q|--quiet)
+                QUIET=true
                 shift
                 ;;
             -h|--help)
@@ -70,7 +140,7 @@ strip_markdown() {
 # Extract heading and snippet from file in a single pass
 get_heading_and_snippet() {
     local file="$1"
-    local max_chars=200
+    local max_chars="$SNIPPET_LENGTH"
     local heading=""
     local snippet=""
     local found_heading=false
@@ -182,12 +252,69 @@ get_file_metadata() {
     fi
 }
 
+# Check if file should be included based on include/exclude patterns
+should_include_file() {
+    local file="$1"
+    local basename_file=$(basename "$file")
+
+    # Check exclude patterns
+    if [[ ${#EXCLUDE_PATTERNS[@]} -gt 0 ]]; then
+        for pattern in "${EXCLUDE_PATTERNS[@]}"; do
+            if [[ "$file" == *"$pattern"* ]] || [[ "$basename_file" == $pattern ]]; then
+                return 1
+            fi
+        done
+    fi
+
+    # Check include patterns (if any specified)
+    if [[ ${#INCLUDE_PATTERNS[@]} -gt 0 ]]; then
+        for pattern in "${INCLUDE_PATTERNS[@]}"; do
+            if [[ "$file" == *"$pattern"* ]] || [[ "$basename_file" == $pattern ]]; then
+                return 0
+            fi
+        done
+        return 1
+    fi
+
+    return 0
+}
+
+# Get sorted list of files
+get_sorted_files() {
+    local dir="$1"
+    local depth_arg=""
+
+    if [[ -n "$MAX_DEPTH" ]]; then
+        depth_arg="-maxdepth $MAX_DEPTH"
+    fi
+
+    case "$SORT_BY" in
+        name)
+            find "$dir" $depth_arg -type f 2>/dev/null | sort
+            ;;
+        date)
+            if [[ "$OSTYPE" == "darwin"* ]]; then
+                find "$dir" $depth_arg -type f 2>/dev/null -exec stat -f "%m %N" {} \; | sort -rn | cut -d' ' -f2-
+            else
+                find "$dir" $depth_arg -type f 2>/dev/null -printf "%T@ %p\n" | sort -rn | cut -d' ' -f2-
+            fi
+            ;;
+        size)
+            if [[ "$OSTYPE" == "darwin"* ]]; then
+                find "$dir" $depth_arg -type f 2>/dev/null -exec stat -f "%z %N" {} \; | sort -rn | cut -d' ' -f2-
+            else
+                find "$dir" $depth_arg -type f 2>/dev/null -printf "%s %p\n" | sort -rn | cut -d' ' -f2-
+            fi
+            ;;
+    esac
+}
+
 # Generate TOC content
 generate_toc() {
     local output=""
 
     # Header
-    output+="# Documentation Table of Contents\n\n"
+    output+="# $TOC_TITLE\n\n"
     output+="Generated: $(date +%Y-%m-%d)\n\n"
 
     if [[ ! -d "$DOCS_DIR" ]]; then
@@ -195,41 +322,149 @@ generate_toc() {
         exit 1
     fi
 
+    # Get all files
+    local all_files=()
+    while IFS= read -r file; do
+        if should_include_file "$file"; then
+            all_files+=("$file")
+        fi
+    done < <(get_sorted_files "$DOCS_DIR")
+
     # Count files
-    local total_files=$(find "$DOCS_DIR" -type f | wc -l | tr -d ' ')
-    local md_files=$(find "$DOCS_DIR" -type f -name "*.md" | wc -l | tr -d ' ')
+    local total_files=${#all_files[@]}
+    local md_files=0
+    for file in "${all_files[@]}"; do
+        if [[ "$file" == *.md ]]; then
+            ((md_files++))
+        fi
+    done
 
     output+="**Total files:** $total_files ($md_files markdown files)\n\n"
     output+="---\n\n"
 
-    # Process each directory
-    output+="## 📁 Plans\n\n"
-    if [[ -d "$DOCS_DIR/plans" ]]; then
-        output+=$(process_directory "$DOCS_DIR/plans" "")
-    fi
-    output+="\n"
-
-    output+="## 📁 Research\n\n"
-    if [[ -d "$DOCS_DIR/research" ]]; then
-        # Process top-level research files
-        while IFS= read -r file; do
-            output+=$(process_file "$file" "")
-        done < <(find "$DOCS_DIR/research" -maxdepth 1 -type f -name "*.md" | sort)
-
-        # Process sectors subdirectory
-        if [[ -d "$DOCS_DIR/research/sectors" ]]; then
-            output+="\n### 📂 Sectors\n\n"
-            output+=$(process_directory "$DOCS_DIR/research/sectors" "")
-        fi
-    fi
-    output+="\n"
-
-    output+="## 📁 Sample Data\n\n"
-    if [[ -d "$DOCS_DIR/sample-data" ]]; then
-        output+=$(process_directory "$DOCS_DIR/sample-data" "")
-    fi
+    # Generate output based on GROUP_BY option
+    case "$GROUP_BY" in
+        directory)
+            output+=$(generate_by_directory "${all_files[@]}")
+            ;;
+        type)
+            output+=$(generate_by_type "${all_files[@]}")
+            ;;
+        none)
+            output+=$(generate_flat "${all_files[@]}")
+            ;;
+    esac
 
     echo -e "$output"
+}
+
+# Generate TOC grouped by directory
+generate_by_directory() {
+    local files=("$@")
+    local output=""
+    local current_dir=""
+    local depth=0
+
+    for file in "${files[@]}"; do
+        local file_dir=$(dirname "$file")
+        local rel_dir="${file_dir#$DOCS_DIR}"
+        rel_dir="${rel_dir#/}"
+
+        if [[ "$file_dir" != "$current_dir" ]]; then
+            current_dir="$file_dir"
+            if [[ -n "$rel_dir" ]]; then
+                depth=$(echo "$rel_dir" | tr -cd '/' | wc -c)
+                local dir_name=$(basename "$file_dir")
+                dir_name=$(echo "$dir_name" | sed 's/-/ /g' | awk '{for(i=1;i<=NF;i++)sub(/./,toupper(substr($i,1,1)),$i)}1')
+
+                if [[ $depth -eq 0 ]]; then
+                    output+="\n## 📁 $dir_name\n\n"
+                else
+                    local heading=$(printf '###%.0s' $(seq 1 $((depth + 2))))
+                    output+="\n$heading 📂 $dir_name\n\n"
+                fi
+            fi
+        fi
+        output+=$(process_file "$file" "")
+    done
+
+    echo "$output"
+}
+
+# Generate TOC grouped by file type
+generate_by_type() {
+    local files=("$@")
+    local output=""
+    local extensions=()
+    local ext
+
+    # Get unique extensions
+    for file in "${files[@]}"; do
+        if [[ "$file" == *.* ]]; then
+            ext="${file##*.}"
+        else
+            ext="no-extension"
+        fi
+
+        # Check if extension already in list
+        local found=false
+        if [[ ${#extensions[@]} -gt 0 ]]; then
+            for existing_ext in "${extensions[@]}"; do
+                if [[ "$existing_ext" == "$ext" ]]; then
+                    found=true
+                    break
+                fi
+            done
+        fi
+
+        if [[ "$found" == false ]]; then
+            extensions+=("$ext")
+        fi
+    done
+
+    # Sort extensions
+    IFS=$'\n' extensions=($(sort <<<"${extensions[*]}"))
+    unset IFS
+
+    # Output each type group
+    for ext in "${extensions[@]}"; do
+        local type_name="$ext"
+        if [[ "$ext" == "no-extension" ]]; then
+            type_name="No Extension"
+        else
+            type_name=$(echo "$ext" | tr '[:lower:]' '[:upper:]')
+        fi
+
+        output+="\n## 📄 $type_name Files\n\n"
+
+        # Process files of this type
+        for file in "${files[@]}"; do
+            local file_ext
+            if [[ "$file" == *.* ]]; then
+                file_ext="${file##*.}"
+            else
+                file_ext="no-extension"
+            fi
+
+            if [[ "$file_ext" == "$ext" ]]; then
+                output+=$(process_file "$file" "")
+            fi
+        done
+    done
+
+    echo "$output"
+}
+
+# Generate flat TOC (no grouping)
+generate_flat() {
+    local files=("$@")
+    local output=""
+
+    for file in "${files[@]}"; do
+        output+=$(process_file "$file" "")
+    done
+
+    echo "$output"
 }
 
 # Process a directory
@@ -258,9 +493,26 @@ process_file() {
 
     # Format the line based on file type
     if [[ "$extension" == "md" ]]; then
-        # Extract heading and snippet in one pass
-        local result=$(get_heading_and_snippet "$file")
-        IFS='|' read -r heading snippet <<< "$result"
+        local heading=""
+        local snippet=""
+
+        # Extract heading and snippet (unless NO_SNIPPETS is set)
+        if [[ "$NO_SNIPPETS" == true ]]; then
+            # Only extract heading, skip snippet for performance
+            while IFS= read -r line; do
+                if [[ "$line" =~ ^#\ (.+)$ ]] || [[ "$line" =~ ^##\ (.+)$ ]]; then
+                    heading="${BASH_REMATCH[1]}"
+                    heading="${heading//\*\*/}"
+                    heading="${heading//\*/}"
+                    heading="${heading//\`/}"
+                    heading="${heading//_/}"
+                    break
+                fi
+            done < "$file"
+        else
+            local result=$(get_heading_and_snippet "$file")
+            IFS='|' read -r heading snippet <<< "$result"
+        fi
 
         local title="${filename%.md}"
 
@@ -281,7 +533,7 @@ process_file() {
             local formatted_size=$(format_size "$size")
 
             output+="${indent}- **[$title]($rel_path)**  \n"
-            if [[ -n "$snippet" ]]; then
+            if [[ -n "$snippet" && "$NO_SNIPPETS" == false ]]; then
                 output+="${indent}  ${snippet}  \n"
             fi
             output+="${indent}  *${formatted_size} • Modified: ${mod_date}*\n\n"
@@ -307,10 +559,19 @@ process_file() {
 generate_simple_toc() {
     local output=""
 
-    output+="# Documentation Table of Contents\n\n"
+    output+="# $TOC_TITLE\n\n"
 
-    # Use tree-like structure
+    if [[ ! -d "$DOCS_DIR" ]]; then
+        echo "Error: Documentation directory '$DOCS_DIR' not found" >&2
+        exit 1
+    fi
+
+    # Use tree-like structure with filtering and sorting
     while IFS= read -r file; do
+        if ! should_include_file "$file"; then
+            continue
+        fi
+
         local rel_path="${file#./}"
         local depth=$(echo "$rel_path" | tr -cd '/' | wc -c)
         local indent=""
@@ -322,8 +583,20 @@ generate_simple_toc() {
         local extension="${filename##*.}"
 
         if [[ "$extension" == "md" ]]; then
-            local result=$(get_heading_and_snippet "$file")
-            IFS='|' read -r heading snippet <<< "$result"
+            local heading=""
+
+            # Only extract heading for markdown files
+            while IFS= read -r line; do
+                if [[ "$line" =~ ^#\ (.+)$ ]] || [[ "$line" =~ ^##\ (.+)$ ]]; then
+                    heading="${BASH_REMATCH[1]}"
+                    heading="${heading//\*\*/}"
+                    heading="${heading//\*/}"
+                    heading="${heading//\`/}"
+                    heading="${heading//_/}"
+                    break
+                fi
+            done < "$file"
+
             local title="${filename%.md}"
 
             if [[ -n "$heading" ]]; then
@@ -337,7 +610,7 @@ generate_simple_toc() {
         else
             output+="${indent}- [$filename]($rel_path)\n"
         fi
-    done < <(find "$DOCS_DIR" -type f | sort)
+    done < <(get_sorted_files "$DOCS_DIR")
 
     echo -e "$output"
 }
@@ -357,7 +630,9 @@ main() {
     # Output to file or stdout
     if [[ -n "$OUTPUT_FILE" ]]; then
         echo -e "$toc_content" > "$OUTPUT_FILE"
-        echo "Table of contents generated: $OUTPUT_FILE"
+        if [[ "$QUIET" == false ]]; then
+            echo "Table of contents generated: $OUTPUT_FILE"
+        fi
     else
         echo -e "$toc_content"
     fi

@@ -5,12 +5,25 @@ A fast, efficient bash script that automatically generates a table of contents f
 ## Features
 
 - **Smart Content Extraction**: Automatically extracts headings and meaningful snippets from markdown files
-- **Two Output Modes**:
+- **Flexible Directory Scanning**: Specify any directory to scan, not just `docs/`
+- **Multiple Output Modes**:
   - **Full Mode**: Rich output with snippets, file sizes, and modification dates
   - **Simple Mode**: Clean, minimal list of files and titles
-- **Markdown Formatting Cleanup**: Strips markdown syntax from headings and snippets for clean display
-- **Cross-Platform**: Works on both macOS and Linux
-- **Customizable Output**: Write to file or stdout
+  - **No-Snippets Mode**: Faster processing by skipping content extraction
+- **Advanced Filtering**:
+  - Include/exclude patterns for fine-grained file selection
+  - Support for multiple patterns per filter
+- **Flexible Grouping**:
+  - Group by directory (default)
+  - Group by file type/extension
+  - No grouping (flat list)
+- **Multiple Sorting Options**: Sort by name, date, or size
+- **Depth Control**: Limit directory traversal depth
+- **Customizable**:
+  - Custom ToC title
+  - Configurable snippet length
+  - Quiet mode for scripting
+- **Cross-Platform**: Compatible with Bash 3.2+ (works on macOS and Linux)
 - **Fast Performance**: Single-pass file reading with efficient parsing
 
 ## Installation
@@ -44,9 +57,16 @@ sudo cp generate-docs-toc.sh /usr/local/bin/generate-docs-toc
 
 ### Basic Usage
 
-Generate and print ToC to stdout:
+Generate and print ToC to stdout (uses `docs/` directory by default):
 ```bash
 ./generate-docs-toc.sh
+```
+
+### Custom Directory
+
+Scan a different documentation directory:
+```bash
+./generate-docs-toc.sh -d documentation
 ```
 
 ### Output to File
@@ -63,18 +83,109 @@ Generate a minimal ToC without metadata:
 ./generate-docs-toc.sh --simple
 ```
 
-### Help
+### Filtering Files
 
+Exclude specific files or patterns:
 ```bash
-./generate-docs-toc.sh --help
+./generate-docs-toc.sh -e "*.draft.md" -e "tmp/" -e "archive/"
 ```
+
+Include only specific files:
+```bash
+./generate-docs-toc.sh -i "*.md"
+```
+
+### Sorting Options
+
+Sort by modification date (newest first):
+```bash
+./generate-docs-toc.sh --sort date
+```
+
+Sort by file size (largest first):
+```bash
+./generate-docs-toc.sh --sort size
+```
+
+### Grouping Options
+
+Group by file type instead of directory:
+```bash
+./generate-docs-toc.sh --group-by type
+```
+
+No grouping (flat list):
+```bash
+./generate-docs-toc.sh --group-by none
+```
+
+### Performance Optimization
+
+Disable snippet extraction for faster processing:
+```bash
+./generate-docs-toc.sh --no-snippets
+```
+
+Limit directory depth:
+```bash
+./generate-docs-toc.sh --max-depth 2
+```
+
+### Custom Snippet Length
+
+Set custom snippet length (default is 200 characters):
+```bash
+./generate-docs-toc.sh -l 300
+```
+
+### Custom Title
+
+Set a custom title for the ToC:
+```bash
+./generate-docs-toc.sh --title "API Documentation Index"
+```
+
+### Quiet Mode
+
+Suppress progress messages (useful in scripts):
+```bash
+./generate-docs-toc.sh -o TOC.md -q
+```
+
+### Combined Options
+
+Here are some useful combinations:
+
+Generate a clean, fast ToC with filtering:
+```bash
+./generate-docs-toc.sh -d docs -o README.md --no-snippets -e "*.draft.md" -q
+```
+
+API documentation index sorted by date:
+```bash
+./generate-docs-toc.sh -d api --title "API Reference" --sort date --group-by type
+```
+
+Only markdown files, limited depth, custom snippets:
+```bash
+./generate-docs-toc.sh -i "*.md" --max-depth 3 -l 150
 
 ## Options
 
 | Option | Description |
 |--------|-------------|
+| `-d, --directory DIR` | Documentation directory to scan (default: `docs`) |
 | `-o, --output FILE` | Write output to FILE instead of stdout |
 | `-s, --simple` | Simple mode (only paths and titles, no metadata) |
+| `-l, --snippet-length NUM` | Maximum snippet length in characters (default: 200) |
+| `--max-depth NUM` | Maximum directory depth to traverse (default: unlimited) |
+| `--sort [name\|date\|size]` | Sort files by name, date, or size (default: name) |
+| `-e, --exclude PATTERN` | Exclude files/dirs matching pattern (can be used multiple times) |
+| `-i, --include PATTERN` | Only include files matching pattern (can be used multiple times) |
+| `--no-snippets` | Disable snippet extraction for faster processing |
+| `--title TEXT` | Custom title for table of contents |
+| `--group-by [directory\|type\|none]` | How to group files (default: directory) |
+| `-q, --quiet` | Suppress progress messages |
 | `-h, --help` | Show help message |
 
 ## Output Examples
@@ -132,17 +243,9 @@ The script intelligently:
 
 ## Requirements
 
-- Bash 4.0 or later
+- Bash 3.2 or later (compatible with macOS default bash)
 - Standard Unix utilities: `find`, `sed`, `stat`, `awk`
 - Works on macOS and Linux
-
-## Configuration
-
-By default, the script looks for documentation in a `docs/` directory. To change this, edit the `DOCS_DIR` variable in the script:
-
-```bash
-DOCS_DIR="documentation"  # Change from "docs" to "documentation"
-```
 
 ## Use Cases
 
@@ -227,6 +330,24 @@ Contributions are welcome! Please feel free to submit a Pull Request.
 Created with ❤️ for better documentation management
 
 ## Changelog
+
+### 2.0.0 (2025-11-23)
+- **New Features**:
+  - Custom directory scanning (`-d, --directory`)
+  - Multiple filtering options (`-e, --exclude`, `-i, --include`)
+  - Three grouping modes: directory, type, none (`--group-by`)
+  - Multiple sorting options: name, date, size (`--sort`)
+  - Configurable snippet length (`-l, --snippet-length`)
+  - Maximum depth control (`--max-depth`)
+  - No-snippets mode for faster processing (`--no-snippets`)
+  - Custom ToC title (`--title`)
+  - Quiet mode (`-q, --quiet`)
+- **Improvements**:
+  - Generic directory processing (removed hardcoded structure)
+  - Bash 3.2 compatibility (works with macOS default bash)
+  - Better performance with selective snippet extraction
+- **Breaking Changes**:
+  - None (all new features are opt-in via flags)
 
 ### 1.0.0 (2025-11-23)
 - Initial release

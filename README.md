@@ -2,6 +2,12 @@
 
 A fast, efficient bash script that automatically generates a table of contents for your documentation files with smart content extraction and metadata.
 
+[![Test Suite](https://github.com/danjdewhurst/docs-toc-generator/actions/workflows/test.yml/badge.svg)](https://github.com/danjdewhurst/docs-toc-generator/actions/workflows/test.yml)
+[![Tests](https://img.shields.io/badge/tests-148%20passing-brightgreen)](tests/)
+[![Coverage](https://img.shields.io/badge/coverage-100%25-brightgreen)](tests/)
+[![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+[![Bash](https://img.shields.io/badge/bash-3.2%2B-blue.svg)](https://www.gnu.org/software/bash/)
+
 ## Features
 
 - **Smart Content Extraction**: Automatically extracts headings and meaningful snippets from markdown files
@@ -269,6 +275,7 @@ git add docs/README.md
 
 ### GitHub Actions
 
+**Auto-update ToC on documentation changes:**
 ```yaml
 name: Update Documentation ToC
 on:
@@ -293,6 +300,25 @@ jobs:
           git push
 ```
 
+**Run tests on pull requests:**
+```yaml
+name: Test Suite
+on: [push, pull_request]
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y bats parallel
+      - name: Run tests
+        run: |
+          cd tests
+          ./run_tests.sh
+```
+
 ### Makefile Integration
 
 ```makefile
@@ -310,6 +336,63 @@ The script is optimized for performance:
 - Minimal external command calls
 - Handles hundreds of files quickly
 
+## Testing
+
+This project includes a comprehensive test suite with **148 tests** covering all functionality.
+
+### Quick Test Run
+
+```bash
+cd tests
+./run_tests.sh
+```
+
+**Performance:** Tests run in parallel by default (~6 seconds on modern CPUs)
+
+### Test Coverage
+
+- ✅ **Core Functionality** (30 tests) - Script execution, output modes, metadata
+- ✅ **Command-line Arguments** (31 tests) - All flags and options
+- ✅ **Filtering & Sorting** (27 tests) - Include/exclude patterns, sort modes
+- ✅ **Grouping Options** (29 tests) - Directory, type, and flat grouping
+- ✅ **Markdown Processing** (31 tests) - Heading extraction, snippet generation
+
+### Prerequisites
+
+**Install Bats:**
+```bash
+brew install bats-core  # macOS
+# or
+sudo apt-get install bats  # Linux
+```
+
+**Optional - Install GNU Parallel for 3x faster tests:**
+```bash
+brew install parallel  # macOS
+# or
+sudo apt-get install parallel  # Linux
+```
+
+### Test Options
+
+```bash
+./run_tests.sh                  # Run all tests in parallel (~6 sec)
+./run_tests.sh --no-parallel    # Sequential execution (~18 sec)
+./run_tests.sh -j 4             # Use 4 parallel jobs
+./run_tests.sh --verbose        # Detailed output
+./run_tests.sh --filter "heading"  # Run specific tests
+```
+
+### Test Results
+
+```
+Total Tests:  148 ✓
+Success Rate: 100%
+Time:         ~6 seconds (parallel) / ~18 seconds (sequential)
+```
+
+For more details, see [tests/README.md](tests/README.md) or [tests/QUICK_START.md](tests/QUICK_START.md)
+
 ## License
 
 MIT License - see [LICENSE](LICENSE) file for details
@@ -322,9 +405,18 @@ Contributions are welcome! Please feel free to submit a Pull Request.
 
 1. Fork the repository
 2. Create your feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'Add amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
+3. Make your changes
+4. **Run the test suite** to ensure everything works:
+   ```bash
+   cd tests
+   ./run_tests.sh
+   ```
+5. Add tests for new features
+6. Commit your changes (`git commit -m 'Add amazing feature'`)
+7. Push to the branch (`git push origin feature/amazing-feature`)
+8. Open a Pull Request
+
+All pull requests must pass the test suite (148 tests) before merging.
 
 ## Author
 
@@ -343,10 +435,16 @@ Created with ❤️ for better documentation management
   - No-snippets mode for faster processing (`--no-snippets`)
   - Custom ToC title (`--title`)
   - Quiet mode (`-q, --quiet`)
+- **Testing**:
+  - Comprehensive test suite with 148 tests (100% coverage)
+  - Parallel test execution with auto-detected CPU cores (~3x faster)
+  - 5 test suites covering all functionality
+  - Bats-based testing framework
 - **Improvements**:
   - Generic directory processing (removed hardcoded structure)
   - Bash 3.2 compatibility (works with macOS default bash)
   - Better performance with selective snippet extraction
+  - Fixed empty array handling for edge cases
 - **Breaking Changes**:
   - None (all new features are opt-in via flags)
 

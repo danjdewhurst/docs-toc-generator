@@ -3,7 +3,7 @@
 set -euo pipefail
 
 # Version
-VERSION="2.2.0"
+VERSION="2.2.1"
 
 # Configuration
 DOCS_DIR="docs"

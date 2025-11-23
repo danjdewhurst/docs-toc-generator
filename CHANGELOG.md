@@ -5,6 +5,23 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.1.0] - 2025-11-23
+
+### Added
+- add versioning system with automated bump script
+- add version flag to display script version
+- v2.0.0: add extensive new options and features (v2.0.0)
+- initial documentation ToC generator
+
+### Changed
+- add comprehensive testing documentation
+- update README with correct GitHub username
+
+### Fixed
+- improve mixed markdown formatting test
+- handle empty arrays in directory processing
+
+
 ## [2.0.0] - 2025-11-23
 
 ### Added

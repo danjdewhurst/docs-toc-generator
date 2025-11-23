@@ -1,0 +1,18 @@
+# Test outputs
+output/*
+!output/.gitkeep
+
+# Temporary test files
+*.tmp
+*.temp
+temp-*
+test-output-*
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Editor files
+*.swp
+*.swo
+*~

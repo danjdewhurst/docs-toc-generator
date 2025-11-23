@@ -255,8 +255,10 @@ teardown() {
     [[ "$output" =~ "bold" ]]
     [[ "$output" =~ "italic" ]]
     [[ "$output" =~ "code" ]]
-    [[ ! "$output" =~ "**" ]]
-    [[ ! "$output" =~ "\`" ]]
+    # Extract just the snippet line (not the header which has ** markers)
+    snippet=$(echo "$output" | grep "This has" || true)
+    [[ ! "$snippet" =~ "**" ]]
+    [[ ! "$snippet" =~ "\`" ]]
 }
 
 # ============================================================================

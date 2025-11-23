@@ -155,6 +155,54 @@ Preview changes without modifying files:
 4. **Creates commit** with message: `chore: bump version to X.Y.Z`
 5. **Creates git tag** (optional): `vX.Y.Z`
 6. **Pushes changes** (optional)
+7. **Triggers GitHub release** (when tags are pushed)
+
+## GitHub Release Integration
+
+This project includes automated GitHub release creation via GitHub Actions.
+
+### How It Works
+
+When you push a version tag (e.g., `v2.1.0`):
+
+1. **GitHub Actions workflow triggers** (`.github/workflows/release.yml`)
+2. **Release notes are extracted** from CHANGELOG.md for that version
+3. **GitHub release is created** automatically with:
+   - Release title: "Release v2.1.0"
+   - Release notes from CHANGELOG.md
+   - Release assets: `generate-docs-toc.sh`, `VERSION`, `CHANGELOG.md`
+
+### Using with bump-version.sh
+
+The easiest way to trigger a release:
+
+```bash
+./bump-version.sh --tag --push
+```
+
+This single command:
+- Bumps the version
+- Updates all files
+- Creates a git commit
+- Creates a git tag
+- Pushes to remote
+- **Automatically triggers GitHub release creation**
+
+### Manual Release Creation
+
+If you prefer manual control, you can still create releases manually:
+
+```bash
+# Bump and tag locally
+./bump-version.sh --tag
+
+# Review changes before pushing
+git show HEAD
+git show v2.1.0
+
+# Push when ready (triggers release)
+git push && git push --tags
+```
 
 ## Manual Version Bump
 
@@ -237,17 +285,25 @@ git log $(git describe --tags --abbrev=0)..HEAD --oneline
 ### 3. Push Release
 
 ```bash
-# Push commits and tags
+# Push commits and tags (triggers automated GitHub release)
 git push && git push --tags
 ```
 
-### 4. Create GitHub Release
+### 4. Automated GitHub Release
 
-1. Go to [GitHub Releases](https://github.com/danjdewhurst/docs-toc-generator/releases)
-2. Click "Draft a new release"
-3. Select the new tag
-4. Copy relevant section from CHANGELOG.md
-5. Publish release
+When you push a version tag (e.g., `v2.1.0`), GitHub Actions automatically:
+
+1. **Extracts release notes** from CHANGELOG.md for that version
+2. **Creates a GitHub release** with the tag name
+3. **Attaches release assets**:
+   - `generate-docs-toc.sh` (the main script)
+   - `VERSION` (version file)
+   - `CHANGELOG.md` (full changelog)
+
+**No manual steps required!** The release appears at:
+https://github.com/danjdewhurst/docs-toc-generator/releases
+
+You can view the automation workflow at `.github/workflows/release.yml`
 
 ## Version History
 

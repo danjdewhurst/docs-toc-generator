@@ -6,6 +6,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 VERSION_FILE="${SCRIPT_DIR}/VERSION"
 SCRIPT_FILE="${SCRIPT_DIR}/generate-docs-toc.sh"
 CHANGELOG_FILE="${SCRIPT_DIR}/CHANGELOG.md"
+TEST_FILE="${SCRIPT_DIR}/tests/test_generate_toc.bats"
 
 BOLD='\033[1m'
 GREEN='\033[0;32m'
@@ -280,6 +281,12 @@ update_files() {
     sed -i.bak "s/^VERSION=\".*\"/VERSION=\"${new_version}\"/" "$SCRIPT_FILE"
     rm -f "${SCRIPT_FILE}.bak"
     log_info "Updated ${SCRIPT_FILE} to ${new_version}"
+
+    if [[ -f "$TEST_FILE" ]]; then
+        sed -i.bak "s/\[\[ \"\$output\" =~ \"[0-9]*\.[0-9]*\.[0-9]*\" \]\]/[[ \"\$output\" =~ \"${new_version}\" ]]/" "$TEST_FILE"
+        rm -f "${TEST_FILE}.bak"
+        log_info "Updated ${TEST_FILE} to ${new_version}"
+    fi
 }
 
 main() {
@@ -362,6 +369,7 @@ main() {
         echo "Would update:"
         echo "  - VERSION: ${current_version} → ${new_version}"
         echo "  - ${SCRIPT_FILE}: VERSION variable"
+        echo "  - ${TEST_FILE}: version check in tests"
         echo "  - ${CHANGELOG_FILE}: Add new version section"
         if [[ "$create_tag" == "true" ]]; then
             echo "  - Git tag: v${new_version}"
@@ -376,7 +384,7 @@ main() {
     update_changelog "$new_version" "$last_tag"
     log_info "Updated CHANGELOG.md"
 
-    git add "$VERSION_FILE" "$SCRIPT_FILE" "$CHANGELOG_FILE"
+    git add "$VERSION_FILE" "$SCRIPT_FILE" "$CHANGELOG_FILE" "$TEST_FILE"
     git commit -m "chore: bump version to ${new_version}"
     log_info "Created commit for version ${new_version}"
 

@@ -56,7 +56,7 @@ contains() {
 @test "script displays version with --version flag" {
     run "$SCRIPT" --version
     [ "$status" -eq 0 ]
-    [[ "$output" =~ "2.2.0" ]]
+    [[ "$output" =~ "2.2.1" ]]
 }
 
 @test "script displays help with -h flag" {

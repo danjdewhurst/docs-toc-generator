@@ -187,6 +187,7 @@ Only markdown files, limited depth, custom snippets:
 | `--group-by [directory\|type\|none]` | How to group files (default: directory) |
 | `-q, --quiet` | Suppress progress messages |
 | `-h, --help` | Show help message |
+| `-v, --version` | Show version information |
 
 ## Output Examples
 

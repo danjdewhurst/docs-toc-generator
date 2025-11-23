@@ -2,6 +2,9 @@
 
 set -euo pipefail
 
+# Version
+VERSION="2.0.0"
+
 # Configuration
 DOCS_DIR="docs"
 OUTPUT_FILE=""
@@ -37,6 +40,7 @@ OPTIONS:
     --group-by [directory|type|none]  How to group files (default: directory)
     -q, --quiet               Suppress progress messages
     -h, --help                Show this help message
+    -v, --version             Show version information
 
 EXAMPLES:
     $(basename "$0")                                    # Print TOC to stdout
@@ -111,6 +115,10 @@ parse_args() {
                 ;;
             -h|--help)
                 usage
+                ;;
+            -v|--version)
+                echo "Documentation ToC Generator v$VERSION"
+                exit 0
                 ;;
             *)
                 echo "Error: Unknown option: $1" >&2

@@ -262,28 +262,28 @@ teardown() {
 }
 
 @test "single file with group by directory" {
-    mkdir -p "$OUTPUT_DIR/single"
-    echo "# Single" > "$OUTPUT_DIR/single/test.md"
-    run "$SCRIPT" -d "$OUTPUT_DIR/single" --group-by directory
+    mkdir -p "$OUTPUT_DIR/single-dir"
+    echo "# Single" > "$OUTPUT_DIR/single-dir/test.md"
+    run "$SCRIPT" -d "$OUTPUT_DIR/single-dir" --group-by directory
     [ "$status" -eq 0 ]
     [[ "$output" =~ "Single" ]]
-    rm -rf "$OUTPUT_DIR/single"
+    rm -rf "$OUTPUT_DIR/single-dir"
 }
 
 @test "single file with group by type" {
-    mkdir -p "$OUTPUT_DIR/single"
-    echo "# Single" > "$OUTPUT_DIR/single/test.md"
-    run "$SCRIPT" -d "$OUTPUT_DIR/single" --group-by type
+    mkdir -p "$OUTPUT_DIR/single-type"
+    echo "# Single" > "$OUTPUT_DIR/single-type/test.md"
+    run "$SCRIPT" -d "$OUTPUT_DIR/single-type" --group-by type
     [ "$status" -eq 0 ]
     [[ "$output" =~ "MD Files" ]] || [[ "$output" =~ "md" ]]
-    rm -rf "$OUTPUT_DIR/single"
+    rm -rf "$OUTPUT_DIR/single-type"
 }
 
 @test "single file with group by none" {
-    mkdir -p "$OUTPUT_DIR/single"
-    echo "# Single" > "$OUTPUT_DIR/single/test.md"
-    run "$SCRIPT" -d "$OUTPUT_DIR/single" --group-by none
+    mkdir -p "$OUTPUT_DIR/single-none"
+    echo "# Single" > "$OUTPUT_DIR/single-none/test.md"
+    run "$SCRIPT" -d "$OUTPUT_DIR/single-none" --group-by none
     [ "$status" -eq 0 ]
     [[ "$output" =~ "Single" ]]
-    rm -rf "$OUTPUT_DIR/single"
+    rm -rf "$OUTPUT_DIR/single-none"
 }

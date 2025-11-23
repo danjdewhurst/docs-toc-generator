@@ -18,7 +18,7 @@ A fast, efficient bash script that automatically generates a table of contents f
 ### Quick Install
 
 ```bash
-curl -o generate-docs-toc.sh https://raw.githubusercontent.com/YOUR_USERNAME/docs-toc-generator/main/generate-docs-toc.sh
+curl -o generate-docs-toc.sh https://raw.githubusercontent.com/danjdewhurst/docs-toc-generator/main/generate-docs-toc.sh
 chmod +x generate-docs-toc.sh
 ```
 
@@ -26,7 +26,7 @@ chmod +x generate-docs-toc.sh
 
 1. Clone the repository:
 ```bash
-git clone https://github.com/YOUR_USERNAME/docs-toc-generator.git
+git clone https://github.com/danjdewhurst/docs-toc-generator.git
 cd docs-toc-generator
 ```
 

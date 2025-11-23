@@ -1,0 +1,46 @@
+name: Update Documentation ToC
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'docs/**'
+      - '!docs/README.md'  # Don't trigger on ToC updates
+
+jobs:
+  update-toc:
+    name: Generate Table of Contents
+    runs-on: ubuntu-latest
+
+    # Skip if commit message contains [skip-toc]
+    if: "!contains(github.event.head_commit.message, '[skip-toc]')"
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Generate ToC
+        run: |
+          chmod +x generate-docs-toc.sh
+          ./generate-docs-toc.sh -d docs -o docs/README.md
+
+      - name: Check for changes
+        id: verify-changes
+        run: |
+          if git diff --quiet docs/README.md; then
+            echo "changed=false" >> $GITHUB_OUTPUT
+          else
+            echo "changed=true" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Commit and push changes
+        if: steps.verify-changes.outputs.changed == 'true'
+        run: |
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+          git add docs/README.md
+          git commit -m "docs: auto-update documentation ToC [skip-ci]"
+          git push

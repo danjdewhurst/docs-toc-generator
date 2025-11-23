@@ -1,0 +1,43 @@
+name: Test Suite
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  test:
+    name: Run Tests
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y bats parallel
+
+      - name: Verify installations
+        run: |
+          bats --version
+          parallel --version
+
+      - name: Run test suite
+        run: |
+          cd tests
+          ./run_tests.sh
+
+      - name: Test summary
+        if: always()
+        run: |
+          if [ $? -eq 0 ]; then
+            echo "✓ All 148 tests passed!"
+          else
+            echo "✗ Some tests failed"
+            exit 1
+          fi
